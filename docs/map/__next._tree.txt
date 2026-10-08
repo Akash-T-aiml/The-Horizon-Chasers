@@ -1,0 +1,4 @@
+:HL["/The-Horizon-Chasers/_next/static/chunks/3u41jfro2j3dq.css","style"]
+2:[["children",{"s":"__PAGE__","h":160}]]
+1:[["children",{"s":"map","h":96,"c":"$Q2"}]]
+0:{"b":"ma0ZN6WTJcSm5Ons8FVdW","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

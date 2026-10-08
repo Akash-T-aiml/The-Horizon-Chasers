@@ -7,28 +7,87 @@ const GOOGLE_MAPS_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || 'AIzaSyDq4kTe84CYs9P0uRYbolBEe51pfe88rlk';
 
 // Coimbatore corridor endpoints
-const ORIGIN_LATLNG = { lat: 11.0827, lng: 77.0607 };       // KPR Institute
+const ORIGIN_LATLNG = { lat: 11.0827, lng: 77.0607 };       // KPR Institute (Arasur)
 const DEST_LATLNG   = { lat: 10.9972, lng: 76.9635 };       // Cbe Railway Station
 
-// Waypoints to shape each alternative route through realistic Coimbatore roads
-const ROUTE_WAYPOINTS: Record<string, Array<{ location: { lat: number; lng: number }; stopover: boolean }>> = {
-  ROUTE_A: [
-    { location: { lat: 11.0210, lng: 76.9980 }, stopover: false }, // Peelamedu
-    { location: { lat: 11.0145, lng: 76.9820 }, stopover: false }, // Lakshmi Mills (congested)
-  ],
-  ROUTE_B: [
-    { location: { lat: 11.0150, lng: 77.0280 }, stopover: false }, // Singanallur bypass
-    { location: { lat: 10.9980, lng: 76.9780 }, stopover: false }, // Sungam / Trichy Road
-  ],
-  ROUTE_C: [
-    { location: { lat: 11.0250, lng: 76.9800 }, stopover: false }, // RS Puram
-  ],
+/* ─── Real Coimbatore Road Geometries (curve-accurate polylines) ─── */
+// Route A: Avinashi Road Core (NH544 — High Congestion Corridor)
+const ROUTE_A_COORDS = [
+  { lat: 11.0827, lng: 77.0607 }, // KPR Institute Entrance
+  { lat: 11.0812, lng: 77.0592 },
+  { lat: 11.0772, lng: 77.0545 }, // Arasur NH544
+  { lat: 11.0720, lng: 77.0490 },
+  { lat: 11.0660, lng: 77.0428 }, // Neelambur Junction / L&T Bypass
+  { lat: 11.0605, lng: 77.0375 },
+  { lat: 11.0545, lng: 77.0315 }, // Chinniampalayam
+  { lat: 11.0490, lng: 77.0270 },
+  { lat: 11.0450, lng: 77.0235 }, // KMCH / CIT
+  { lat: 11.0375, lng: 77.0180 }, // SITRA / Airport Junction
+  { lat: 11.0315, lng: 77.0140 },
+  { lat: 11.0250, lng: 77.0090 }, // Hope College Flyover
+  { lat: 11.0230, lng: 77.0035 },
+  { lat: 11.0210, lng: 76.9980 }, // Peelamedu / PSG Tech
+  { lat: 11.0195, lng: 76.9940 },
+  { lat: 11.0180, lng: 76.9900 }, // Nava India Junction
+  { lat: 11.0160, lng: 76.9855 },
+  { lat: 11.0145, lng: 76.9820 }, // Lakshmi Mills Junction (Severe bottleneck)
+  { lat: 11.0135, lng: 76.9775 },
+  { lat: 11.0120, lng: 76.9740 },
+  { lat: 11.0110, lng: 76.9710 }, // Anna Salai / VOC Park
+  { lat: 11.0065, lng: 76.9690 },
+  { lat: 11.0020, lng: 76.9670 }, // Collectorate Office / Station Feeder
+  { lat: 10.9985, lng: 76.9648 }, // Goodshed Road
+  { lat: 10.9972, lng: 76.9635 }, // Coimbatore Railway Station
+];
+
+// Route B: Trichy Road / Singanallur Bypass (Recommended Alternative Corridor)
+const ROUTE_B_COORDS = [
+  { lat: 11.0827, lng: 77.0607 }, // KPR Institute
+  { lat: 11.0772, lng: 77.0545 }, // Arasur NH544
+  { lat: 11.0660, lng: 77.0428 }, // Neelambur Junction
+  { lat: 11.0550, lng: 77.0440 }, // Southern bypass link
+  { lat: 11.0450, lng: 77.0435 },
+  { lat: 11.0340, lng: 77.0420 }, // Ondipudur Link Road
+  { lat: 11.0260, lng: 77.0390 },
+  { lat: 11.0210, lng: 77.0360 }, // Ondipudur Flyover / Trichy Road
+  { lat: 11.0160, lng: 77.0290 },
+  { lat: 11.0115, lng: 77.0220 }, // Singanallur Junction
+  { lat: 11.0075, lng: 77.0110 },
+  { lat: 11.0040, lng: 77.0010 }, // Ramanathapuram Junction
+  { lat: 11.0010, lng: 76.9890 },
+  { lat: 10.9980, lng: 76.9780 }, // Sungam Flyover / Bypass
+  { lat: 10.9970, lng: 76.9720 },
+  { lat: 10.9960, lng: 76.9670 }, // Lanka Corner / State Bank Road
+  { lat: 10.9972, lng: 76.9635 }, // Coimbatore Railway Station
+];
+
+// Route C: Kalapatti / Sathy Road / Ganapathy Bypass (Alternative Corridor C)
+const ROUTE_C_COORDS = [
+  { lat: 11.0827, lng: 77.0607 }, // KPR Institute
+  { lat: 11.0780, lng: 77.0510 },
+  { lat: 11.0710, lng: 77.0380 }, // Kalapatti Road
+  { lat: 11.0660, lng: 77.0220 }, // Kalapatti Village
+  { lat: 11.0600, lng: 77.0050 }, // Saravanampatti Junction
+  { lat: 11.0500, lng: 76.9970 },
+  { lat: 11.0360, lng: 76.9850 }, // Ganapathy Junction
+  { lat: 11.0280, lng: 76.9780 },
+  { lat: 11.0190, lng: 76.9680 }, // Gandhipuram Cross Cut Road
+  { lat: 11.0130, lng: 76.9660 }, // Dr. Nanjappa Road
+  { lat: 11.0050, lng: 76.9650 },
+  { lat: 10.9995, lng: 76.9642 }, // State Bank Road
+  { lat: 10.9972, lng: 76.9635 }, // Coimbatore Railway Station
+];
+
+const ROUTE_COORDINATES: Record<string, Array<{ lat: number; lng: number }>> = {
+  ROUTE_A: ROUTE_A_COORDS,
+  ROUTE_B: ROUTE_B_COORDS,
+  ROUTE_C: ROUTE_C_COORDS,
 };
 
 const CONGESTION_ZONES = [
-  { lat: 11.0145, lng: 76.9820, label: 'Lakshmi Mills — SEVERE', color: '#DC2626', radius: 380 },
-  { lat: 11.0250, lng: 77.0090, label: 'Hope College — HEAVY',  color: '#EA580C', radius: 280 },
-  { lat: 11.0130, lng: 76.9660, label: 'Anna Salai — HEAVY',   color: '#EA580C', radius: 320 },
+  { lat: 11.0145, lng: 76.9820, label: 'Lakshmi Mills — SEVERE', color: '#DC2626', radius: 450 },
+  { lat: 11.0250, lng: 77.0090, label: 'Hope College — HEAVY',  color: '#EA580C', radius: 350 },
+  { lat: 11.0130, lng: 76.9660, label: 'Anna Salai — HEAVY',   color: '#EA580C', radius: 350 },
 ];
 
 const ROUTE_COLORS: Record<string, string> = {
@@ -61,7 +120,6 @@ function loadGoogleMapsScript(): Promise<void> {
   scriptPromise = new Promise((resolve) => {
     const existing = document.getElementById('gmaps-traffix');
     if (existing) {
-      // already injected — poll for readiness
       const iv = setInterval(() => {
         if (window.google?.maps) { clearInterval(iv); resolve(); }
       }, 100);
@@ -80,18 +138,18 @@ function loadGoogleMapsScript(): Promise<void> {
 
 /* ─── Component ────────────────────────────────────────────────── */
 export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
-  mode           = 'LIVE',
+  mode            = 'LIVE',
   selectedRouteId = 'ROUTE_B',
   onSelectRoute,
   compact         = false,
   forecastOffset  = 0,
 }) => {
-  const mapRef          = useRef<HTMLDivElement>(null);
-  const mapObj          = useRef<google.maps.Map | null>(null);
-  const trafficLayer    = useRef<google.maps.TrafficLayer | null>(null);
-  const directionsRends = useRef<google.maps.DirectionsRenderer[]>([]);
-  const circles         = useRef<google.maps.Circle[]>([]);
-  const markers         = useRef<google.maps.Marker[]>([]);
+  const mapRef       = useRef<HTMLDivElement>(null);
+  const mapObj       = useRef<google.maps.Map | null>(null);
+  const trafficLayer = useRef<google.maps.TrafficLayer | null>(null);
+  const polylines    = useRef<google.maps.Polyline[]>([]);
+  const circles      = useRef<google.maps.Circle[]>([]);
+  const markers      = useRef<google.maps.Marker[]>([]);
 
   const [ready,        setReady]        = useState(false);
   const [activeMode,   setActiveMode]   = useState<MapMode>(mode);
@@ -108,7 +166,7 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
     if (!ready || !mapRef.current || mapObj.current) return;
 
     const map = new window.google.maps.Map(mapRef.current, {
-      center:              { lat: 11.0400, lng: 77.0100 },
+      center:              { lat: 11.0350, lng: 77.0100 },
       zoom:                compact ? 11 : 12,
       mapTypeId:           'roadmap',
       zoomControl:         true,
@@ -128,7 +186,7 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
       ],
     });
 
-    mapObj.current      = map;
+    mapObj.current       = map;
     trafficLayer.current = new window.google.maps.TrafficLayer();
 
     // Origin / Destination markers (persistent)
@@ -193,60 +251,38 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
 
   /* ── 2. Clear overlays helper ───────────────────────── */
   const clearOverlays = useCallback(() => {
-    directionsRends.current.forEach((r) => r.setMap(null));
-    directionsRends.current = [];
+    polylines.current.forEach((p) => p.setMap(null));
+    polylines.current = [];
     circles.current.forEach((c) => c.setMap(null));
     circles.current = [];
     trafficLayer.current?.setMap(null);
   }, []);
 
-  /* ── 3. Fetch a real Directions route ───────────────── */
-  const fetchRoute = useCallback(
-    (routeId: string, strokeColor: string, strokeWeight: number, strokeOpacity: number): Promise<void> => {
-      return new Promise((resolve) => {
-        if (!mapObj.current || !window.google?.maps) { resolve(); return; }
+  /* ── 3. Draw a road polyline ────────────────────────── */
+  const drawRoutePolyline = useCallback(
+    (routeId: string, strokeColor: string, strokeWeight: number, strokeOpacity: number, zIndex = 5) => {
+      if (!mapObj.current || !window.google?.maps) return;
+      const coords = ROUTE_COORDINATES[routeId] || [];
+      if (!coords.length) return;
 
-        const svc = new window.google.maps.DirectionsService();
-        const wps = (ROUTE_WAYPOINTS[routeId] || []).map((wp) => ({
-          location: wp.location,
-          stopover: wp.stopover,
-        }));
-
-        svc.route(
-          {
-            origin:       ORIGIN_LATLNG,
-            destination:  DEST_LATLNG,
-            waypoints:    wps,
-            travelMode:   window.google.maps.TravelMode.DRIVING,
-            provideRouteAlternatives: false,
-          },
-          (result: any, status: any) => {
-            if (status === 'OK' && mapObj.current) {
-              const renderer = new window.google.maps.DirectionsRenderer({
-                map:              mapObj.current,
-                directions:       result,
-                suppressMarkers:  true,      // use our custom A/B markers
-                preserveViewport: true,
-                polylineOptions: {
-                  strokeColor,
-                  strokeWeight,
-                  strokeOpacity,
-                  zIndex: 5,
-                },
-              });
-              directionsRends.current.push(renderer);
-            }
-            resolve();
-          }
-        );
+      const polyline = new window.google.maps.Polyline({
+        path: coords,
+        geodesic: true,
+        strokeColor,
+        strokeOpacity,
+        strokeWeight,
+        zIndex,
+        map: mapObj.current,
       });
+
+      polylines.current.push(polyline);
     },
     []
   );
 
   /* ── 4. Render based on active mode ─────────────────── */
   const renderMode = useCallback(
-    async (currentMode: MapMode, currentRoute: string, offset: number) => {
+    (currentMode: MapMode, currentRoute: string, offset: number) => {
       if (!mapObj.current || !window.google?.maps) return;
       clearOverlays();
 
@@ -261,10 +297,10 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
               center:        { lat: z.lat, lng: z.lng },
               radius:        z.radius,
               strokeColor:   z.color,
-              strokeOpacity: 0.65,
+              strokeOpacity: 0.75,
               strokeWeight:  2,
               fillColor:     z.color,
-              fillOpacity:   0.13,
+              fillOpacity:   0.15,
             })
           );
         });
@@ -272,24 +308,27 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
 
       /* ---- ROUTES ---- */
       if (currentMode === 'ROUTES') {
-        // Draw all 3 candidate routes via Directions API (real roads)
-        const routeIds = ['ROUTE_B', 'ROUTE_C', 'ROUTE_A'];
-        for (const rId of routeIds) {
+        // Draw non-selected routes first, then the selected one on top
+        const allRoutes = ['ROUTE_A', 'ROUTE_C', 'ROUTE_B'];
+        const ordered = allRoutes.filter((r) => r !== currentRoute).concat([currentRoute]);
+
+        ordered.forEach((rId) => {
           const isSelected = rId === currentRoute;
-          await fetchRoute(
+          drawRoutePolyline(
             rId,
             ROUTE_COLORS[rId],
-            isSelected ? 7 : 4,
-            isSelected ? 0.95 : 0.30
+            isSelected ? 6 : 4,
+            isSelected ? 0.95 : 0.35,
+            isSelected ? 10 : 4
           );
-        }
+        });
       }
 
       /* ---- FORECAST ---- */
       if (currentMode === 'FORECAST') {
         trafficLayer.current?.setMap(mapObj.current);
-        const severity  = offset >= 30 ? 0.35 : offset >= 15 ? 0.22 : 0.12;
-        const fColor    = offset >= 30 ? '#DC2626' : offset >= 15 ? '#EA580C' : '#D97706';
+        const severity = offset >= 30 ? 0.35 : offset >= 15 ? 0.22 : 0.12;
+        const fColor   = offset >= 30 ? '#DC2626' : offset >= 15 ? '#EA580C' : '#D97706';
         CONGESTION_ZONES.forEach((z) => {
           circles.current.push(
             new window.google.maps.Circle({
@@ -308,15 +347,15 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
 
       /* ---- PROPAGATION ---- */
       if (currentMode === 'PROPAGATION') {
-        // Fetch Route A with heavy red stroke (the congested corridor)
-        await fetchRoute('ROUTE_A', '#DC2626', 9, 0.85);
+        // Draw Route A corridor with high-visibility red line
+        drawRoutePolyline('ROUTE_A', '#DC2626', 7, 0.90, 8);
 
-        // Expanding shockwave circles at cascade nodes
+        // Cascading shockwave circles at key road intersections
         [
-          { lat: 11.0250, lng: 77.0090, r: 320 },
-          { lat: 11.0145, lng: 76.9820, r: 500 },
-          { lat: 11.0130, lng: 76.9660, r: 380 },
-          { lat: 10.9972, lng: 76.9635, r: 240 },
+          { lat: 11.0250, lng: 77.0090, r: 350 },
+          { lat: 11.0145, lng: 76.9820, r: 520 },
+          { lat: 11.0130, lng: 76.9660, r: 400 },
+          { lat: 10.9972, lng: 76.9635, r: 260 },
         ].forEach((n, i) => {
           circles.current.push(
             new window.google.maps.Circle({
@@ -324,16 +363,16 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
               center:        { lat: n.lat, lng: n.lng },
               radius:        n.r,
               strokeColor:   '#DC2626',
-              strokeOpacity: Math.max(0.25, 0.8 - i * 0.15),
+              strokeOpacity: Math.max(0.25, 0.85 - i * 0.15),
               strokeWeight:  2,
               fillColor:     '#DC2626',
-              fillOpacity:   Math.max(0.04, 0.20 - i * 0.04),
+              fillOpacity:   Math.max(0.05, 0.22 - i * 0.04),
             })
           );
         });
       }
     },
-    [clearOverlays, fetchRoute]
+    [clearOverlays, drawRoutePolyline]
   );
 
   /* ── 5. Re-render when mode / route / offset changes ── */
@@ -449,7 +488,7 @@ export const GoogleTrafficMap: React.FC<GoogleTrafficMapProps> = ({
 
         {/* Badge */}
         <div className="absolute top-2 right-2 bg-white/90 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-500 font-medium shadow-sm z-20 pointer-events-none">
-          📍 Google Maps · Directions API
+          📍 Google Maps · Live Road Layer
         </div>
       </div>
     </div>

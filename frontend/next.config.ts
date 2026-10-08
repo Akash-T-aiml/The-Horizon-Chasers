@@ -5,6 +5,7 @@ const isGithubPages = process.env.GITHUB_PAGES === "true";
 const nextConfig: NextConfig = {
   output: isGithubPages ? "export" : undefined,
   basePath: isGithubPages ? "/The-Horizon-Chasers" : undefined,
+  trailingSlash: isGithubPages ? true : false,
   images: {
     unoptimized: true,
   },
